@@ -12,9 +12,8 @@ export default {
       initCMD: ['ATD', 'ATZ', 'ATE0', 'ATL0', 'ATS0', 'ATH1', 'ATSP0', 'AT0', 'ATSTFF', 'ATFE', 'ATSP6'],
       initStep: 0,
       command: '015B',
-      updateFrequency: 5000,
+      updateFrequency: 3000,
       intervals: [],
-      values: {},
     }
   },
   created () {
@@ -26,6 +25,16 @@ export default {
     console.log('Ampera-e module before destroy')
     this.intervals.forEach(t => clearInterval(t))
   },
+  computed: {
+    values: {
+      get () {
+        return this.$store.state.car.values
+      },
+      set (val) {
+        this.$store.commit('car/updateValues', val)
+      }
+    },
+  },
   watch: {
     bluetoothConnected: {
       handler (val) {
@@ -34,9 +43,7 @@ export default {
         }
       },
       immediate: true,
-    }
-  },
-  computed: {
+    },
   },
   methods: {
     handleData (data) {
@@ -60,15 +67,19 @@ export default {
       this.$root.$emit('sendData', data)
       window.bluetoothSerial.write(data + '\r')
     },
-    periodic () {
+    async periodic () {
       // get SoC
-      // this.sendData('015B')
+      this.sendData('015B')
+      await this.$utils.asyncDelay(100)
 
       // get voltage
-      // this.sendData('22432D')
+      this.sendData('222429')
+      await this.$utils.asyncDelay(100)
+
+      // get current
+      this.sendData('222414')
     },
     splitData (data) {
-      // 7E803415BDB>
       if (typeof data !== 'string') {
         console.error('Invalid data type', data)
         return
@@ -82,6 +93,8 @@ export default {
       out.bytes = parseInt(data.substr(4, 1))
       out.data = data.substr(5, out.bytes * 2)
 
+      this.$root.$emit('analyzedData', out)
+
       return out
     },
     evaluateData (splitData) {
@@ -89,26 +102,26 @@ export default {
       if (!splitData) {
         return
       }
-      let res = ''
       if (splitData.data.startsWith('415B')) {
         // 015B = SoC
         let val = (parseInt(splitData.data.substr(4, 2), 16) * 100 / 255)
-        res = `SoC: ${val.toFixed(1)}%`
+        this.$root.$emit('interpretedData', `SoC: ${val.toFixed(1)}%`)
         this.values.soc = val
       } else if (splitData.data.startsWith('622429')) {
         // 222429 = Voltage
         let val = this.$utils.parseSigned(splitData.data.substr(6, 4)) / 64
-        res = `DC Voltage: ${val.toFixed(1)}V`
-        this.values.dc_voltage = val
+        this.$root.$emit('interpretedData', `DC Voltage: ${val.toFixed(1)}V`)
+        this.values.dcVoltage = val
       } else if (splitData.data.startsWith('622414')) {
         // 222414 = Current
         let val = this.$utils.parseSigned(splitData.data.substr(6, 4)) / 20
-        res = `DC Current: ${val.toFixed(1)}V`
-        this.values.dc_current = val
-      } else {
-        res = `${splitData.data} from ${splitData.id}`
+        this.$root.$emit('interpretedData', `DC Current: ${val.toFixed(1)}A`)
+        this.values.dcCurrent = val
       }
-      this.$root.$emit('analyzedData', res)
+
+      if (this.values.dcCurrent && this.values.dcVoltage) {
+        this.values.dcPower = (this.values.dcCurrent * this.values.dcVoltage) / 1000
+      }
     }
   },
 }

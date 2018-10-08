@@ -6,5 +6,6 @@ function parseSigned (data) {
 export default ({ Vue }) => {
   Vue.prototype.$utils = {
     parseSigned,
+    asyncDelay: ms => new Promise(resolve => setTimeout(resolve, ms)),
   }
 }

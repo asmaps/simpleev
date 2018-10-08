@@ -12,7 +12,7 @@ export default {
     }
   },
   created () {
-    self.locationWatcher = navigator.geolocation.watchPosition(
+    this.locationWatcher = navigator.geolocation.watchPosition(
       this.handleNewPosition,
       this.handlePositionError,
       {enableHighAccuracy: true}
@@ -28,12 +28,20 @@ export default {
         return 'text-warning'
       }
     },
+    values: {
+      get () {
+        return this.$store.state.car.values
+      },
+      set (val) {
+        this.$store.commit('car/updateValues', val)
+      }
+    },
   },
   methods: {
     handleNewPosition (position) {
       console.log({newPosition: position})
       this.state = true
-      // TODO: post location to server
+      this.values.location = position
     },
     handlePositionError (error) {
       console.log({error})

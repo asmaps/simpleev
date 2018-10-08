@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
 
+import car from './car'
 import settings from './settings'
 
 Vue.use(Vuex)
@@ -13,7 +14,8 @@ Vue.use(Vuex)
 export default function (/* { ssrContext } */) {
   const Store = new Vuex.Store({
     modules: {
-      settings
+      car,
+      settings,
     }
   })
 
