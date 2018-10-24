@@ -36,11 +36,17 @@ export default {
   },
   created () {
     console.log('Car Module loader created')
-    this.intervals.push(setTimeout(this.periodic, 5000))
-    window.bluetoothSerial.subscribe('>', this.dataReceived, this.dataError)
+    this.periodic()
+    this.intervals.push(setInterval(this.periodic, 2000))
+    if (window.bluetoothSerial) {
+      window.bluetoothSerial.unsubscribe()
+      window.bluetoothSerial.subscribe('>', this.dataReceived, this.dataError)
+    }
   },
   beforeDestroy () {
-    window.bluetoothSerial.unsubscribe()
+    if (window.bluetoothSerial) {
+      window.bluetoothSerial.unsubscribe()
+    }
     this.intervals.forEach(t => clearInterval(t))
   },
   watch: {
@@ -49,38 +55,57 @@ export default {
         if (val) {
           Vue.component(val, () => import('components/cars/' + val + '.vue'))
           this.moduleLoaded = true
+        } else {
+          this.$q.notify({
+            message: this.$t('car.noCarSelected'),
+            type: 'warning',
+          })
         }
       },
       immediate: true
     },
     bluetoothConnected (val) {
       this.$root.$emit('bluetoothConnectionStateChanged', val)
+      if (val) {
+        this.$q.notify({
+          type: 'positive',
+          message: this.$t('car.bluetoothConnected')
+        })
+      } else {
+        this.$q.notify({
+          type: 'negative',
+          message: this.$t('car.bluetoothDisconnected')
+        })
+      }
     },
   },
   methods: {
     periodic () {
-      window.bluetoothSerial.isConnected(
-        () => {
-          this.bluetoothConnected = true
-        }, () => {
-          this.bluetoothConnected = false
-          if (this.settings.device) {
-            window.bluetoothSerial.connect(
-              this.settings.device,
-              el => {
-                this.bluetoothConnected = true
-              },
-              error => console.log({bluetoothConnectError: error})
-            )
+      if (window.bluetoothSerial) {
+        window.bluetoothSerial.isConnected(
+          () => {
+            this.bluetoothConnected = true
+          }, () => {
+            this.bluetoothConnected = false
+            if (this.settings.device) {
+              window.bluetoothSerial.connect(
+                this.settings.device,
+                el => {
+                  this.bluetoothConnected = true
+                },
+                error => console.log({bluetoothConnectError: error})
+              )
+            }
           }
-        })
+        )
+      }
     },
     dataReceived (data) {
-      console.log({dataReceived: data})
+      console.debug({dataReceived: data})
       this.$root.$emit('bluetoothDataReceived', data)
     },
     dataError (error) {
-      console.log({subscribeError: error})
+      console.debug({subscribeError: error})
       this.$root.$emit('bluetoothDataError', error)
     },
   },

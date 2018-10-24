@@ -2,16 +2,19 @@
   <q-page padding>
     <q-field :label="$t('settings.device')">
       <q-select v-model="device"
+                dark
                 :options="deviceOptions">
       </q-select>
     </q-field>
     <q-field :label="$t('settings.carType')">
       <q-select v-model="carType"
+                dark
                 :options="carTypeOptions">
       </q-select>
     </q-field>
     <q-field :label="$t('settings.keepAwake')">
       <q-btn-toggle v-model="keepAwake"
+                    dark
                     :options="[
                     {label: $t('yes'), value: true},
                     {label: $t('no'), value: false},
@@ -19,12 +22,33 @@
     </q-field>
     <q-field :label="$t('settings.trackLocation')">
       <q-btn-toggle v-model="trackLocation"
+                    dark
                     :options="[
                     {label: $t('yes'), value: true},
                     {label: $t('no'), value: false},
                     ]" />
     </q-field>
-    <div><pre>{{ JSON.stringify(settings, null, 2) }}</pre></div>
+    <q-field :label="$t('settings.syncEVNotify')">
+      <q-btn-toggle v-model="syncEVNotify"
+                    dark
+                    :options="[
+                    {label: $t('yes'), value: true},
+                    {label: $t('no'), value: false},
+                    ]" />
+    </q-field>
+    <q-slide-transition>
+      <div v-if="syncEVNotify">
+        <q-field :label="$t('settings.evnotifyAkey')">
+          <q-input v-model="evnotifyAkey" dark>
+          </q-input>
+        </q-field>
+        <q-field :label="$t('settings.evnotifyToken')">
+          <q-input v-model="evnotifyToken" dark>
+          </q-input>
+        </q-field>
+      </div>
+    </q-slide-transition>
+    <div v-if="false"><pre>{{ JSON.stringify(settings, null, 2) }}</pre></div>
   </q-page>
 </template>
 
@@ -32,7 +56,7 @@
 export default {
   data () {
     return {
-      enabledCarsTypes: ['ampera-e', 'ioniq-bev'],
+      enabledCarsTypes: ['ampera-e', 'ioniq-bev', 'debug'],
       pairedDevices: [],
       listError: undefined,
     }
@@ -70,6 +94,30 @@ export default {
         this.$store.commit('settings/update', {trackLocation: val})
       }
     },
+    syncEVNotify: {
+      get () {
+        return this.settings.syncEVNotify || false
+      },
+      set (val) {
+        this.$store.commit('settings/update', {syncEVNotify: val})
+      }
+    },
+    evnotifyAkey: {
+      get () {
+        return this.settings.evnotifyAkey || ''
+      },
+      set (val) {
+        this.$store.commit('settings/update', {evnotifyAkey: val})
+      }
+    },
+    evnotifyToken: {
+      get () {
+        return this.settings.evnotifyToken || ''
+      },
+      set (val) {
+        this.$store.commit('settings/update', {evnotifyToken: val})
+      }
+    },
     settings () {
       return this.$store.state.settings
     },
@@ -81,10 +129,14 @@ export default {
     },
   },
   mounted () {
-    window.bluetoothSerial.list(
-      devices => { this.pairedDevices = devices },
-      error => this.$q.notify({message: this.$t('settings.errorListBluetooth') + error, type: 'negative'})
-    )
+    if (window.bluetoothSerial) {
+      window.bluetoothSerial.list(
+        devices => {
+          this.pairedDevices = devices
+        },
+        error => this.$q.notify({message: this.$t('settings.errorListBluetooth') + error, type: 'negative'})
+      )
+    }
   }
 }
 </script>

@@ -23,6 +23,26 @@
 
         <car-module-loader />
         <location-tracker v-if="settings.trackLocation" />
+        <ev-notify-connector v-if="settings.syncEVNotify" />
+        <q-btn
+          flat
+          dense
+          round
+          v-if="$q.fullscreen && $q.fullscreen.isCapable"
+          @click="$q.fullscreen.request()"
+          aria-label="Fullscreen"
+        >
+          <q-icon name="fas fa-expand" />
+        </q-btn>
+        <q-btn
+          flat
+          dense
+          round
+          @click="$router.push({name: 'debug'})"
+          aria-label="Debug"
+        >
+          <q-icon name="fas fa-bug" />
+        </q-btn>
         <q-btn
           flat
           dense
@@ -72,11 +92,13 @@
 import { openURL } from 'quasar'
 import CarModuleLoader from 'components/CarModuleLoader'
 import LocationTracker from 'components/LocationTracker'
+import EvNotifyConnector from 'components/EvNotifyConnector'
 import { mapState } from 'vuex'
 
 export default {
   components: {
     CarModuleLoader,
+    EvNotifyConnector,
     LocationTracker,
   },
   data () {
@@ -90,10 +112,12 @@ export default {
   watch: {
     'settings.keepAwake': {
       handler (val) {
-        if (val) {
-          window.plugins.insomnia.keepAwake()
-        } else {
-          window.plugins.insomnia.allowSleepAgain()
+        if (this.$q.platform.is.android) {
+          if (val) {
+            window.plugins.insomnia.keepAwake()
+          } else {
+            window.plugins.insomnia.allowSleepAgain()
+          }
         }
       },
       immediate: true,
@@ -105,7 +129,9 @@ export default {
     }
   },
   beforeDestroy () {
-    window.plugins.insomnia.allowSleepAgain()
+    if (this.$q.platform.is.android) {
+      window.plugins.insomnia.allowSleepAgain()
+    }
   },
   methods: {
     openURL

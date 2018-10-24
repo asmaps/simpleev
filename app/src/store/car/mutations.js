@@ -1,3 +1,7 @@
+import Vue from 'vue'
+
 export function updateValues (state, values) {
-  state.values = Object.assign(state.values, values)
+  for (let [k, v] of Object.entries(values)) {
+    Vue.set(state.values, k, v)
+  }
 }
